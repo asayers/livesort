@@ -20,9 +20,12 @@ fn main_2() -> Result<()> {
     let mut buf = vec![];
     for line in stdin.lines() {
         let line = line?;
-        stdout
-            .queue(MoveToPreviousLine(buf.len() as u16))?
-            .queue(Clear(ClearType::FromCursorDown))?;
+        if !buf.is_empty() {
+            // We don't want to clear any line if we haven't printed yet
+            stdout
+                .queue(MoveToPreviousLine(buf.len() as u16))?
+                .queue(Clear(ClearType::FromCursorDown))?;
+        }
         buf.push(line);
         buf.sort();
         for l in &buf {
