@@ -1,0 +1,8 @@
+[package]
+name = "livesort"
+version = "0.1.0"
+authors = ["Alex Sayers <alex@asayers.com>"]
+edition = "2018"
+
+[dependencies]
+crossterm = "0.17"
