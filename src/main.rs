@@ -2,7 +2,7 @@ use crossterm::cursor::*;
 use crossterm::style::*;
 use crossterm::terminal::*;
 use crossterm::*;
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufRead, BufReader, BufWriter, Write};
 fn main() {
     match main_2() {
         Ok(()) => (),
@@ -16,7 +16,7 @@ fn main_2() -> Result<()> {
     let stdin = std::io::stdin();
     let stdout = std::io::stdout();
     let stdin = BufReader::new(stdin.lock());
-    let mut stdout = stdout.lock();
+    let mut stdout = BufWriter::new(stdout.lock());
     let mut buf = vec![];
     for line in stdin.lines() {
         let line = line?;
