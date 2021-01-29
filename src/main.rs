@@ -1,4 +1,4 @@
-use crossterm::{cursor, terminal, terminal::ClearType, QueueableCommand};
+use crossterm::{cursor, terminal, terminal::ClearType, tty::IsTty, QueueableCommand};
 use std::collections::BTreeMap;
 use std::convert::TryFrom;
 use std::error::Error;
@@ -37,10 +37,12 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut last_print_time = Instant::now();
     let out = stdout();
     let mut out = out.lock();
-    out.write_all(b"\n")?; // Why? I don't know...
+    if out.is_tty() {
+        out.write_all(b"\n")?; // Why? I don't know...
+    }
     for line in stdin().lock().lines() {
         *vals.entry(line.unwrap()).or_default() += 1;
-        if last_print_time.elapsed() > Duration::from_millis(1000 / FPS) {
+        if last_print_time.elapsed() > Duration::from_millis(1000 / FPS) && out.is_tty() {
             out.queue(cursor::MoveToPreviousLine(last_print_rows))?
                 .queue(terminal::Clear(ClearType::FromCursorDown))?;
             let (_, height) = terminal::size()?;
