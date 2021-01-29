@@ -1,5 +1,6 @@
 use crossterm::{cursor, terminal, terminal::ClearType, QueueableCommand};
 use std::collections::BTreeMap;
+use std::convert::TryFrom;
 use std::error::Error;
 use std::io::{stdin, stdout, BufRead, Write};
 use std::time::{Duration, Instant};
@@ -28,12 +29,14 @@ fn main() -> Result<(), Box<dyn Error>> {
             out.queue(cursor::MoveToPreviousLine(last_print_rows))?
                 .queue(terminal::Clear(ClearType::FromCursorDown))?;
             let (_, height) = terminal::size()?;
-            last_print_rows = (height - 1).min(vals.len() as u16);
-            for val in vals.keys().take(last_print_rows as usize) {
+            let len = vals.len();
+            let n = (height as usize - 1).min(len);
+            for val in vals.keys().take(n) {
                 out.write_all(val.as_bytes())?;
                 out.write_all(b"\n")?;
             }
             out.flush()?;
+            last_print_rows = u16::try_from(n).unwrap();
             last_print_time = Instant::now();
         }
     }
