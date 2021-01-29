@@ -29,5 +29,12 @@ fn main() -> Result<(), Box<dyn Error>> {
             last_print_time = Instant::now();
         }
     }
+    out.queue(cursor::MoveToPreviousLine(last_print_rows))?
+        .queue(terminal::Clear(ClearType::FromCursorDown))?;
+    for val in &vals {
+        out.write_all(val.as_bytes())?;
+        out.write_all(b"\n")?;
+    }
+    out.flush()?;
     Ok(())
 }
