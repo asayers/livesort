@@ -13,6 +13,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut last_print_time = Instant::now();
     let out = stdout();
     let mut out = out.lock();
+    out.write_all(b"\n")?; // Why? I don't know...
     for line in stdin().lock().lines() {
         vals.insert(line.unwrap());
         if last_print_time.elapsed() > Duration::from_millis(1000 / FPS) {
