@@ -18,6 +18,21 @@ struct Opts {
 fn main() -> Result<(), Box<dyn Error>> {
     let opts = Opts::from_args();
     let mut vals = BTreeMap::<String, u16>::new();
+
+    // We could prevent this from allocating, but it's not worth it
+    macro_rules! iter {
+        () => {{
+            if opts.uniq {
+                Box::new(vals.keys()) as Box<dyn Iterator<Item = &String>>
+            } else {
+                Box::new(
+                    vals.iter()
+                        .flat_map(|(s, n): (&String, &u16)| std::iter::repeat(s).take(*n as usize)),
+                ) as Box<dyn Iterator<Item = &String>>
+            }
+        }};
+    }
+
     let mut last_print_rows = 0;
     let mut last_print_time = Instant::now();
     let out = stdout();
@@ -29,9 +44,13 @@ fn main() -> Result<(), Box<dyn Error>> {
             out.queue(cursor::MoveToPreviousLine(last_print_rows))?
                 .queue(terminal::Clear(ClearType::FromCursorDown))?;
             let (_, height) = terminal::size()?;
-            let len = vals.len();
+            let len = if opts.uniq {
+                vals.len()
+            } else {
+                vals.values().map(|&x| x as usize).sum()
+            };
             let n = (height as usize - 1).min(len);
-            for val in vals.keys().take(n) {
+            for val in iter!().take(n) {
                 out.write_all(val.as_bytes())?;
                 out.write_all(b"\n")?;
             }
@@ -42,7 +61,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
     out.queue(cursor::MoveToPreviousLine(last_print_rows))?
         .queue(terminal::Clear(ClearType::FromCursorDown))?;
-    for val in vals.keys() {
+    for val in iter!() {
         out.write_all(val.as_bytes())?;
         out.write_all(b"\n")?;
     }
