@@ -1,10 +1,10 @@
 use crossterm::{cursor, terminal, terminal::ClearType, QueueableCommand};
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 use std::error::Error;
 use std::io::{stdin, stdout, BufRead, Write};
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let mut vals = HashSet::new();
+    let mut vals = BTreeSet::new();
     let mut last_print = 0;
     let out = stdout();
     let mut out = out.lock();
