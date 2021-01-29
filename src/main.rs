@@ -3,11 +3,19 @@ use std::collections::BTreeSet;
 use std::error::Error;
 use std::io::{stdin, stdout, BufRead, Write};
 use std::time::{Duration, Instant};
+use structopt::StructOpt;
 
 /// We limit to this many terminal updates per second
 const FPS: u64 = 20;
 
+#[derive(StructOpt)]
+struct Opts {
+    #[structopt(long, short)]
+    uniq: bool,
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
+    let opts = Opts::from_args();
     let mut vals = BTreeSet::new();
     let mut last_print_rows = 0;
     let mut last_print_time = Instant::now();
