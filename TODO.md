@@ -11,3 +11,4 @@
 * [ ] If the user shrinks the height of the terminal while livesort is running,
       some junk will be left in the scrollback buffer.  (There's no issue
       with increasing the height.)
+* [ ] Add --uniq --count mode
