@@ -1,49 +1,70 @@
-use crossterm::cursor::*;
-use crossterm::style::*;
-use crossterm::terminal::*;
-use crossterm::*;
-use std::io::{BufRead, BufReader, BufWriter, Write};
-fn main() {
-    match main_2() {
-        Ok(()) => (),
-        Err(e) => {
-            eprintln!("Error: {}", e);
-            std::process::exit(1);
-        }
-    }
+use crossterm::{cursor, terminal, terminal::ClearType, QueueableCommand};
+use std::collections::BTreeMap;
+use std::convert::TryFrom;
+use std::error::Error;
+use std::io::{stdin, stdout, BufRead, Write};
+use std::time::{Duration, Instant};
+use structopt::StructOpt;
+
+/// We limit to this many terminal updates per second
+const FPS: u64 = 20;
+
+#[derive(StructOpt)]
+struct Opts {
+    #[structopt(long, short)]
+    uniq: bool,
 }
-fn main_2() -> Result<()> {
-    let stdin = std::io::stdin();
-    let stdout = std::io::stdout();
-    let stdin = BufReader::new(stdin.lock());
-    let mut stdout = BufWriter::new(stdout.lock());
-    let mut buf = vec![];
-    let mut printed = 0;
-    macro_rules! clear {
-        () => {
-            // We don't want to clear any line if we haven't printed yet
-            if printed > 0 {
-                stdout
-                    .queue(MoveToPreviousLine(printed as u16))?
-                    .queue(Clear(ClearType::FromCursorDown))?;
+
+fn main() -> Result<(), Box<dyn Error>> {
+    let opts = Opts::from_args();
+    let mut vals = BTreeMap::<String, u16>::new();
+
+    // We could prevent this from allocating, but it's not worth it
+    macro_rules! iter {
+        () => {{
+            if opts.uniq {
+                Box::new(vals.keys()) as Box<dyn Iterator<Item = &String>>
+            } else {
+                Box::new(
+                    vals.iter()
+                        .flat_map(|(s, n): (&String, &u16)| std::iter::repeat(s).take(*n as usize)),
+                ) as Box<dyn Iterator<Item = &String>>
             }
-        };
+        }};
     }
-    for line in stdin.lines() {
-        let line = line?;
-        buf.push(line);
-        buf.sort();
-        clear!();
-        printed = buf.len().min(usize::from(size()?.1 - 1));
-        for l in buf.iter().skip(buf.len() - printed) {
-            stdout.queue(Print(l))?.queue(Print("\n"))?;
+
+    let mut last_print_rows = 0;
+    let mut last_print_time = Instant::now();
+    let out = stdout();
+    let mut out = out.lock();
+    out.write_all(b"\n")?; // Why? I don't know...
+    for line in stdin().lock().lines() {
+        *vals.entry(line.unwrap()).or_default() += 1;
+        if last_print_time.elapsed() > Duration::from_millis(1000 / FPS) {
+            out.queue(cursor::MoveToPreviousLine(last_print_rows))?
+                .queue(terminal::Clear(ClearType::FromCursorDown))?;
+            let (_, height) = terminal::size()?;
+            let len = if opts.uniq {
+                vals.len()
+            } else {
+                vals.values().map(|&x| x as usize).sum()
+            };
+            let n = (height as usize - 1).min(len);
+            for val in iter!().take(n) {
+                out.write_all(val.as_bytes())?;
+                out.write_all(b"\n")?;
+            }
+            out.flush()?;
+            last_print_rows = u16::try_from(n).unwrap();
+            last_print_time = Instant::now();
         }
-        stdout.flush()?;
     }
-    clear!();
-    for l in &buf {
-        stdout.queue(Print(l))?.queue(Print("\n"))?;
+    out.queue(cursor::MoveToPreviousLine(last_print_rows))?
+        .queue(terminal::Clear(ClearType::FromCursorDown))?;
+    for val in iter!() {
+        out.write_all(val.as_bytes())?;
+        out.write_all(b"\n")?;
     }
-    stdout.flush()?;
+    out.flush()?;
     Ok(())
 }
