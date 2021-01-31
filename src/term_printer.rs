@@ -4,6 +4,19 @@ use std::io::Write;
 
 type Result<T> = std::result::Result<T, Box<dyn Error>>;
 
+/// Print to a terminal, clearing the stuff that was written last time.
+///
+/// Here's how to use it:
+///
+/// ```
+/// let mut tp = TermPrinter::new(std::io::stdout());
+/// for i in 0..10 {
+///     tp.clear()?;              // clear what we draw last time
+///     tp.buf.clear();           // clear the buffer
+///     write!(tp.buf, "{}", i)?; // fill the buffer
+///     tp.print()?;              // draw the buffer
+/// }
+/// ```
 pub struct TermPrinter<W> {
     wtr: W,
     pub buf: String,
@@ -19,6 +32,13 @@ impl<W: Write> TermPrinter<W> {
             last_print_start: 0,
         }
     }
+
+    /// Clear the lines we wrote previously.
+    ///
+    /// Note that in some cases this is impossible: for instance, if we print N
+    /// lines and then the user resizes the terminal to something less than N,
+    /// those lines _will_ end up in the scrollback buffer - there's nothing
+    /// we can do about that (without switching to the alternate screen).
     pub fn clear(&mut self) -> Result<()> {
         // Looks like MoveToPreviousLine(0) still moves up one line, so we
         // need to guard the 0 case
@@ -34,6 +54,12 @@ impl<W: Write> TermPrinter<W> {
         }
         Ok(())
     }
+
+    /// Print the visible tail of `buf` to `wtr`.
+    ///
+    /// Stuff that scrolls off the top of the terminal end up in the scrollback
+    /// buffer, where we can't clear it.  Therefore this method will only
+    /// write as many lines as the terminal currently has room for.
     pub fn print(&mut self) -> Result<()> {
         let (width, height) = terminal::size()?;
         let line_starts = soft_breaks(&self.buf, width as usize);
@@ -45,6 +71,9 @@ impl<W: Write> TermPrinter<W> {
         self.last_print_start = start;
         Ok(())
     }
+
+    /// Print all of `buf` to `wtr`.
+    ///
     /// After this we can't reliably clear what we've written (since it
     /// may have gone off the top of the screen).  Hence, this method drops
     /// the `TermPrinter`.
