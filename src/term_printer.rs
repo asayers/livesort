@@ -48,8 +48,7 @@ impl<W: Write> TermPrinter<W> {
             let n = line_starts.len() as u16;
             self.wtr
                 .queue(cursor::MoveToPreviousLine(n))?
-                .queue(terminal::Clear(ClearType::FromCursorDown))?
-                .flush()?;
+                .queue(terminal::Clear(ClearType::FromCursorDown))?;
             self.last_print_start = self.buf.len();
         }
         Ok(())
