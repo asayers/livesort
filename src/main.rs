@@ -103,3 +103,34 @@ impl<W: Write> TermPrinter<W> {
         Ok(())
     }
 }
+
+fn soft_breaks(s: &str, width: usize) -> Vec<usize> {
+    let mut line_starts = vec![0];
+    let mut push = |x: usize| line_starts.push(line_starts.last().unwrap() + x);
+    for line in s.lines() {
+        let len = line.len();
+        for _ in 0..len / width {
+            push(width);
+        }
+        push(len % width + 1);
+    }
+    line_starts.pop(); // Drop the last one
+    line_starts
+}
+
+#[test]
+fn test_soft_breaks() {
+    assert_eq!(soft_breaks("foo", 100), vec![0]);
+    assert_eq!(soft_breaks("foobarqux", 5), vec![0, 5]);
+    assert_eq!(soft_breaks("foobarqux\n", 5), vec![0, 5]);
+    assert_eq!(soft_breaks("foo\nbar\nqux", 100), vec![0, 4, 8]);
+    assert_eq!(
+        soft_breaks("foo\nfoobarquxzap\nfoo", 5),
+        vec![0, 4, 9, 14, 17]
+    );
+    assert_eq!(&"foo\nfoobarquxzap\nfoo"[0..4], "foo\n");
+    assert_eq!(&"foo\nfoobarquxzap\nfoo"[4..9], "fooba");
+    assert_eq!(&"foo\nfoobarquxzap\nfoo"[9..14], "rquxz");
+    assert_eq!(&"foo\nfoobarquxzap\nfoo"[14..17], "ap\n");
+    assert_eq!(&"foo\nfoobarquxzap\nfoo"[17..], "foo");
+}
