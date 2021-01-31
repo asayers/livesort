@@ -37,14 +37,15 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut last_print_time = Instant::now();
     let out = stdout();
     let mut out = out.lock();
-    if out.is_tty() {
-        out.write_all(b"\n")?; // Why? I don't know...
-    }
     for line in stdin().lock().lines() {
         *vals.entry(line.unwrap()).or_default() += 1;
         if last_print_time.elapsed() > Duration::from_millis(1000 / FPS) && out.is_tty() {
-            out.queue(cursor::MoveToPreviousLine(last_print_rows))?
-                .queue(terminal::Clear(ClearType::FromCursorDown))?;
+            if last_print_rows != 0 {
+                // Looks like MoveToPreviousLine(0) still moves up one line,
+                // so we need to guard the 0 case
+                out.queue(cursor::MoveToPreviousLine(last_print_rows))?
+                    .queue(terminal::Clear(ClearType::FromCursorDown))?;
+            }
             let (_, height) = terminal::size()?;
             let len = if opts.uniq {
                 vals.len()
