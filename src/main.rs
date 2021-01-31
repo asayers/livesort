@@ -49,8 +49,10 @@ fn main() -> Result<(), Box<dyn Error>> {
             last_print_time = Instant::now();
         }
     }
-    out.queue(cursor::MoveToPreviousLine(last_print_rows))?
-        .queue(terminal::Clear(ClearType::FromCursorDown))?;
+    if last_print_rows != 0 {
+        out.queue(cursor::MoveToPreviousLine(last_print_rows))?
+            .queue(terminal::Clear(ClearType::FromCursorDown))?;
+    }
     print_vals(opts, &vals, 0, &mut out)?;
     out.flush()?;
     Ok(())
