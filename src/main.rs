@@ -15,6 +15,8 @@ struct Opts {
     uniq: bool,
     #[structopt(long, short)]
     reverse: bool,
+    #[structopt(long, short)]
+    count: bool,
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -35,7 +37,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                     .queue(terminal::Clear(ClearType::FromCursorDown))?;
             }
             let (_, height) = terminal::size()?;
-            let len = if opts.uniq {
+            let len = if opts.count || opts.uniq {
                 vals.len()
             } else {
                 vals.values().map(|&x| x as usize).sum()
@@ -66,7 +68,11 @@ fn print_vals(
     } else {
         Box::new(vals.iter()) as Box<dyn Iterator<Item = (&String, &u64)>>
     };
-    if opts.uniq {
+    if opts.count {
+        for (val, n) in iter.skip(skip) {
+            writeln!(out, "{:>7} {}", n, val)?;
+        }
+    } else if opts.uniq {
         for val in iter.map(|(s, _)| s).skip(skip) {
             writeln!(out, "{}", val)?;
         }

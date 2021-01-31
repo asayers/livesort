@@ -13,7 +13,7 @@
       with increasing the height.)  We could fix this by using the alternate
       screen for live preview and then switching back to the regular screen
       for the final dump.
-* [ ] Add --uniq --count mode
+* [x] Add --uniq --count mode
 * [ ] Add sort by frequency mode
 * [ ] Redraw when the terminal geometry changes, even if no new data comes in
 * [ ] Add a "...and <N> more lines" when truncating?
