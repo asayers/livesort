@@ -10,5 +10,10 @@
       correct location and inserting a line.
 * [ ] If the user shrinks the height of the terminal while livesort is running,
       some junk will be left in the scrollback buffer.  (There's no issue
-      with increasing the height.)
+      with increasing the height.)  We could fix this by using the alternate
+      screen for live preview and then switching back to the regular screen
+      for the final dump.
 * [ ] Add --uniq --count mode
+* [ ] Add sort by frequency mode
+* [ ] Redraw when the terminal geometry changes, even if no new data comes in
+* [ ] Add a "...and <N> more lines" when truncating?
