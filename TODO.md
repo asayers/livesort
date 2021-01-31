@@ -1,8 +1,10 @@
 * [x] Get something working.
 * [x] If the output exceeds the height of the terminal, and the user
       scrolls back, things are pretty messed up.
-* [ ] If the output exceeds the width of the terminal, we don't clear
+* [x] If the output exceeds the width of the terminal, we don't clear
       enough lines.
+* [ ] If the terminal width increases, so that a line which previously
+      wrapped no longer wraps, we clear too many lines in the next redraw.
 * [x] We could at least try to detect a non-interactive output and just behave
       like regular `sort`.
 * [ ] Currently we redraw the entire screen on every new line.  It should be

@@ -93,12 +93,12 @@ impl<W: Write> TermPrinter<W> {
         Ok(())
     }
     fn print(&mut self, s: &str) -> Result<()> {
-        let (_, height) = terminal::size()?;
-        let len = s.lines().count();
+        let (width, height) = terminal::size()?;
+        let line_starts = soft_breaks(s, width as usize);
+        let len = line_starts.len();
         let n = (height as usize - 1).min(len);
-        for line in s.lines().skip(len - n) {
-            writeln!(self.wtr, "{}", line)?;
-        }
+        let start = line_starts[len - n];
+        self.wtr.write_all(&s.as_bytes()[start..])?;
         self.last_print_rows = u16::try_from(n).unwrap();
         Ok(())
     }
