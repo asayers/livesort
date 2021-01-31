@@ -16,6 +16,9 @@ struct Opts {
     /// Reverse the sort order
     #[structopt(long, short)]
     reverse: bool,
+    /// Sort in order of number of occurances
+    #[structopt(long, short)]
+    frequency: bool,
     /// Print each unique line once
     #[structopt(long, short, group = "format")]
     uniq: bool,
@@ -54,10 +57,17 @@ fn fmt_vals(opts: Opts, vals: &BTreeMap<String, u64>, buf: &mut String) -> Resul
     use std::fmt::Write;
     buf.clear();
     // We could prevent this from allocating, but it's not worth it
-    let iter = if opts.reverse {
-        Box::new(vals.iter().rev()) as Box<dyn Iterator<Item = (&String, &u64)>>
+    let iter = if opts.frequency {
+        let mut x = vals.iter().collect::<Vec<_>>();
+        x.sort_by_key(|(_, n)| *n);
+        Box::new(x.into_iter()) as Box<dyn DoubleEndedIterator<Item = (&String, &u64)>>
     } else {
-        Box::new(vals.iter()) as Box<dyn Iterator<Item = (&String, &u64)>>
+        Box::new(vals.iter()) as Box<dyn DoubleEndedIterator<Item = (&String, &u64)>>
+    };
+    let iter = if opts.reverse {
+        Box::new(iter.rev()) as Box<dyn Iterator<Item = (&String, &u64)>>
+    } else {
+        Box::new(iter) as Box<dyn Iterator<Item = (&String, &u64)>>
     };
     for (val, n) in iter {
         if opts.count {
