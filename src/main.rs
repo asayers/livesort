@@ -28,12 +28,13 @@ fn main() -> Result<()> {
     let mut vals = BTreeMap::<String, u64>::new();
 
     let out = stdout();
+    let is_tty = out.is_tty();
     let mut tp = TermPrinter::new(out.lock());
 
     let mut last_print_time = Instant::now();
     for line in stdin().lock().lines() {
         *vals.entry(line.unwrap()).or_default() += 1;
-        if last_print_time.elapsed() > Duration::from_millis(1000 / FPS) && out.is_tty() {
+        if last_print_time.elapsed() > Duration::from_millis(1000 / FPS) && is_tty {
             tp.clear()?;
             fmt_vals(opts, &vals, &mut tp.buf)?;
             tp.print()?;
