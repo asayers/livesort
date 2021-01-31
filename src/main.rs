@@ -19,7 +19,7 @@ struct Opts {
 
 fn main() -> Result<(), Box<dyn Error>> {
     let opts = Opts::from_args();
-    let mut vals = BTreeMap::<String, u16>::new();
+    let mut vals = BTreeMap::<String, u64>::new();
 
     let mut last_print_rows = 0;
     let mut last_print_time = Instant::now();
@@ -56,15 +56,15 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 fn print_vals(
     opts: Opts,
-    vals: &BTreeMap<String, u16>,
+    vals: &BTreeMap<String, u64>,
     skip: usize,
     mut out: impl Write,
 ) -> Result<(), Box<dyn Error>> {
     // We could prevent this from allocating, but it's not worth it
     let iter = if opts.reverse {
-        Box::new(vals.iter().rev()) as Box<dyn Iterator<Item = (&String, &u16)>>
+        Box::new(vals.iter().rev()) as Box<dyn Iterator<Item = (&String, &u64)>>
     } else {
-        Box::new(vals.iter()) as Box<dyn Iterator<Item = (&String, &u16)>>
+        Box::new(vals.iter()) as Box<dyn Iterator<Item = (&String, &u64)>>
     };
     if opts.uniq {
         for val in iter.map(|(s, _)| s).skip(skip) {
@@ -72,7 +72,7 @@ fn print_vals(
         }
     } else {
         for val in iter
-            .flat_map(|(s, n): (&String, &u16)| std::iter::repeat(s).take(*n as usize))
+            .flat_map(|(s, n): (&String, &u64)| std::iter::repeat(s).take(*n as usize))
             .skip(skip)
         {
             writeln!(out, "{}", val)?;
