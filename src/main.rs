@@ -19,72 +19,87 @@ struct Opts {
     count: bool,
 }
 
-fn main() -> Result<(), Box<dyn Error>> {
+type Result<T> = std::result::Result<T, Box<dyn Error>>;
+
+fn main() -> Result<()> {
     let opts = Opts::from_args();
     let mut vals = BTreeMap::<String, u64>::new();
 
-    let mut last_print_rows = 0;
     let mut last_print_time = Instant::now();
     let out = stdout();
-    let mut out = out.lock();
+    let mut tp = TermPrinter::new(out.lock());
+    let mut buf = String::new();
     for line in stdin().lock().lines() {
         *vals.entry(line.unwrap()).or_default() += 1;
         if last_print_time.elapsed() > Duration::from_millis(1000 / FPS) && out.is_tty() {
-            if last_print_rows != 0 {
-                // Looks like MoveToPreviousLine(0) still moves up one line,
-                // so we need to guard the 0 case
-                out.queue(cursor::MoveToPreviousLine(last_print_rows))?
-                    .queue(terminal::Clear(ClearType::FromCursorDown))?;
-            }
-            let (_, height) = terminal::size()?;
-            let len = if opts.count || opts.uniq {
-                vals.len()
-            } else {
-                vals.values().map(|&x| x as usize).sum()
-            };
-            let n = (height as usize - 1).min(len);
-            print_vals(opts, &vals, len - n, &mut out)?;
-            out.flush()?;
-            last_print_rows = u16::try_from(n).unwrap();
+            fmt_vals(opts, &vals, &mut buf)?;
+            tp.clear()?;
+            tp.print(&buf)?;
+            tp.wtr.flush()?;
             last_print_time = Instant::now();
         }
     }
-    if last_print_rows != 0 {
-        out.queue(cursor::MoveToPreviousLine(last_print_rows))?
-            .queue(terminal::Clear(ClearType::FromCursorDown))?;
-    }
-    print_vals(opts, &vals, 0, &mut out)?;
-    out.flush()?;
+    fmt_vals(opts, &vals, &mut buf)?;
+    tp.clear()?;
+    tp.wtr.write_all(buf.as_bytes())?;
+    tp.wtr.flush()?;
     Ok(())
 }
 
-fn print_vals(
-    opts: Opts,
-    vals: &BTreeMap<String, u64>,
-    skip: usize,
-    mut out: impl Write,
-) -> Result<(), Box<dyn Error>> {
+fn fmt_vals(opts: Opts, vals: &BTreeMap<String, u64>, buf: &mut String) -> Result<()> {
+    use std::fmt::Write;
+    buf.clear();
     // We could prevent this from allocating, but it's not worth it
     let iter = if opts.reverse {
         Box::new(vals.iter().rev()) as Box<dyn Iterator<Item = (&String, &u64)>>
     } else {
         Box::new(vals.iter()) as Box<dyn Iterator<Item = (&String, &u64)>>
     };
-    if opts.count {
-        for (val, n) in iter.skip(skip) {
-            writeln!(out, "{:>7} {}", n, val)?;
-        }
-    } else if opts.uniq {
-        for val in iter.map(|(s, _)| s).skip(skip) {
-            writeln!(out, "{}", val)?;
-        }
-    } else {
-        for val in iter
-            .flat_map(|(s, n): (&String, &u64)| std::iter::repeat(s).take(*n as usize))
-            .skip(skip)
-        {
-            writeln!(out, "{}", val)?;
+    for (val, n) in iter {
+        if opts.count {
+            writeln!(buf, "{:>7} {}", n, val)?;
+        } else if opts.uniq {
+            writeln!(buf, "{}", val)?;
+        } else {
+            for _ in 0..*n {
+                writeln!(buf, "{}", val)?;
+            }
         }
     }
     Ok(())
+}
+
+struct TermPrinter<W> {
+    wtr: W,
+    last_print_rows: u16,
+}
+
+impl<W: Write> TermPrinter<W> {
+    fn new(wtr: W) -> TermPrinter<W> {
+        TermPrinter {
+            wtr,
+            last_print_rows: 0,
+        }
+    }
+    fn clear(&mut self) -> Result<()> {
+        // Looks like MoveToPreviousLine(0) still moves up one line, so we
+        // need to guard the 0 case
+        if self.last_print_rows != 0 {
+            self.wtr
+                .queue(cursor::MoveToPreviousLine(self.last_print_rows))?
+                .queue(terminal::Clear(ClearType::FromCursorDown))?;
+            self.last_print_rows = 0;
+        }
+        Ok(())
+    }
+    fn print(&mut self, s: &str) -> Result<()> {
+        let (_, height) = terminal::size()?;
+        let len = s.lines().count();
+        let n = (height as usize - 1).min(len);
+        for line in s.lines().skip(len - n) {
+            writeln!(self.wtr, "{}", line)?;
+        }
+        self.last_print_rows = u16::try_from(n).unwrap();
+        Ok(())
+    }
 }
