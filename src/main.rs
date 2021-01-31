@@ -9,7 +9,7 @@ use structopt::StructOpt;
 /// We limit to this many terminal updates per second
 const FPS: u64 = 20;
 
-#[derive(StructOpt)]
+#[derive(StructOpt, Copy, Clone)]
 struct Opts {
     #[structopt(long, short)]
     uniq: bool,
@@ -20,24 +20,6 @@ struct Opts {
 fn main() -> Result<(), Box<dyn Error>> {
     let opts = Opts::from_args();
     let mut vals = BTreeMap::<String, u16>::new();
-
-    // We could prevent this from allocating, but it's not worth it
-    macro_rules! iter {
-        () => {{
-            let iter = if opts.reverse {
-                Box::new(vals.iter().rev()) as Box<dyn Iterator<Item = (&String, &u16)>>
-            } else {
-                Box::new(vals.iter()) as Box<dyn Iterator<Item = (&String, &u16)>>
-            };
-            if opts.uniq {
-                Box::new(iter.map(|(s, _)| s)) as Box<dyn Iterator<Item = &String>>
-            } else {
-                Box::new(
-                    iter.flat_map(|(s, n): (&String, &u16)| std::iter::repeat(s).take(*n as usize)),
-                ) as Box<dyn Iterator<Item = &String>>
-            }
-        }};
-    }
 
     let mut last_print_rows = 0;
     let mut last_print_time = Instant::now();
@@ -59,7 +41,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 vals.values().map(|&x| x as usize).sum()
             };
             let n = (height as usize - 1).min(len);
-            for val in iter!().skip(len - n) {
+            for val in iter(opts, &vals).skip(len - n) {
                 out.write_all(val.as_bytes())?;
                 out.write_all(b"\n")?;
             }
@@ -70,10 +52,25 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
     out.queue(cursor::MoveToPreviousLine(last_print_rows))?
         .queue(terminal::Clear(ClearType::FromCursorDown))?;
-    for val in iter!() {
+    for val in iter(opts, &vals) {
         out.write_all(val.as_bytes())?;
         out.write_all(b"\n")?;
     }
     out.flush()?;
     Ok(())
+}
+
+fn iter(opts: Opts, vals: &BTreeMap<String, u16>) -> Box<dyn Iterator<Item = &String> + '_> {
+    // We could prevent this from allocating, but it's not worth it
+    let iter = if opts.reverse {
+        Box::new(vals.iter().rev()) as Box<dyn Iterator<Item = (&String, &u16)>>
+    } else {
+        Box::new(vals.iter()) as Box<dyn Iterator<Item = (&String, &u16)>>
+    };
+    if opts.uniq {
+        Box::new(iter.map(|(s, _)| s)) as Box<dyn Iterator<Item = &String>>
+    } else {
+        Box::new(iter.flat_map(|(s, n): (&String, &u16)| std::iter::repeat(s).take(*n as usize)))
+            as Box<dyn Iterator<Item = &String>>
+    }
 }
