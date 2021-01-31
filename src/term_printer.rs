@@ -102,26 +102,31 @@ fn soft_breaks(s: &str, width: usize) -> Vec<usize> {
     line_starts
 }
 
-#[test]
-fn test_soft_breaks() {
-    assert_eq!(soft_breaks("foo", 100), vec![0]);
-    assert_eq!(soft_breaks("foobarqux", 5), vec![0, 5]);
-    assert_eq!(soft_breaks("foobarqux\n", 5), vec![0, 5]);
-    assert_eq!(soft_breaks("foo\nbar\nqux", 100), vec![0, 4, 8]);
-    assert_eq!(
-        soft_breaks("foo\nfoobarquxzap\nfoo", 5),
-        vec![0, 4, 9, 14, 17]
-    );
-    assert_eq!(&"foo\nfoobarquxzap\nfoo"[0..4], "foo\n");
-    assert_eq!(&"foo\nfoobarquxzap\nfoo"[4..9], "fooba");
-    assert_eq!(&"foo\nfoobarquxzap\nfoo"[9..14], "rquxz");
-    assert_eq!(&"foo\nfoobarquxzap\nfoo"[14..17], "ap\n");
-    assert_eq!(&"foo\nfoobarquxzap\nfoo"[17..], "foo");
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-#[test]
-#[should_panic]
-// FIXME: This is a bug
-fn test_soft_breaks_rn() {
-    assert_eq!(soft_breaks("foo\r\nbar\r\nqux", 100), vec![0, 5, 10]);
+    #[test]
+    fn test_soft_breaks() {
+        assert_eq!(soft_breaks("foo", 100), vec![0]);
+        assert_eq!(soft_breaks("foobarqux", 5), vec![0, 5]);
+        assert_eq!(soft_breaks("foobarqux\n", 5), vec![0, 5]);
+        assert_eq!(soft_breaks("foo\nbar\nqux", 100), vec![0, 4, 8]);
+        assert_eq!(
+            soft_breaks("foo\nfoobarquxzap\nfoo", 5),
+            vec![0, 4, 9, 14, 17]
+        );
+        assert_eq!(&"foo\nfoobarquxzap\nfoo"[0..4], "foo\n");
+        assert_eq!(&"foo\nfoobarquxzap\nfoo"[4..9], "fooba");
+        assert_eq!(&"foo\nfoobarquxzap\nfoo"[9..14], "rquxz");
+        assert_eq!(&"foo\nfoobarquxzap\nfoo"[14..17], "ap\n");
+        assert_eq!(&"foo\nfoobarquxzap\nfoo"[17..], "foo");
+    }
+
+    #[test]
+    #[should_panic]
+    // FIXME: This is a bug
+    fn test_soft_breaks_rn() {
+        assert_eq!(soft_breaks("foo\r\nbar\r\nqux", 100), vec![0, 5, 10]);
+    }
 }
