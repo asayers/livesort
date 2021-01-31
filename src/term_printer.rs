@@ -107,6 +107,15 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_soft_breaks_ambiguous() {
+        assert_eq!(soft_breaks("foobar", 3), vec![0, 3]);
+        assert_eq!(soft_breaks("foobar\n", 3), vec![0, 3]);
+        assert_eq!(soft_breaks("foobar\nqux", 3), vec![0, 3, 7]);
+        assert_eq!(soft_breaks("foobar\nqux\n", 3), vec![0, 3, 7]);
+        assert_eq!(soft_breaks("foo\nbar\n", 3), vec![0, 4]);
+    }
+
+    #[test]
     fn test_soft_breaks() {
         assert_eq!(soft_breaks("foo", 100), vec![0]);
         assert_eq!(soft_breaks("foobarqux", 5), vec![0, 5]);
