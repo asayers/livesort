@@ -6,12 +6,13 @@ input () {
 }
 slow() { while read line; do echo "$line"; sleep 1; done; }
 
+export LC_ALL=C
 echo "DIFF livesort vs sort"
-diff <(input | ./target/debug/livesort) <(input | sort) && echo "OK"
+diff <(<Cargo.lock ./target/debug/livesort) <(<Cargo.lock sort) && echo "OK"
 echo "DIFF livesort -u vs sort | uniq"
-diff <(input | ./target/debug/livesort -u) <(input | sort | uniq) && echo "OK"
+diff <(<Cargo.lock ./target/debug/livesort -u) <(<Cargo.lock sort | uniq) && echo "OK"
 echo "DIFF livesort -c vs sort | uniq -c"
-diff <(input | ./target/debug/livesort -c) <(input | sort | uniq -c) && echo "OK"
+diff <(<Cargo.lock ./target/debug/livesort -c) <(<Cargo.lock sort | uniq -c) && echo "OK"
 
 echo
 echo RUNNING livesort
