@@ -77,7 +77,7 @@ impl<W: Write> TermPrinter<W> {
     /// After this we can't reliably clear what we've written (since it
     /// may have gone off the top of the screen).  Hence, this method drops
     /// the `TermPrinter`.
-    pub fn print_unconstrained(mut self) -> Result<()> {
+    pub fn print_all(mut self) -> Result<()> {
         self.wtr.write_all(self.buf.as_bytes())?;
         self.wtr.flush()?;
         Ok(())

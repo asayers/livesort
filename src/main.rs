@@ -43,7 +43,7 @@ fn main() -> Result<()> {
     }
     tp.clear()?;
     fmt_vals(opts, &vals, &mut tp.buf)?;
-    tp.print_unconstrained()?;
+    tp.print_all()?;
     Ok(())
 }
 
