@@ -1,0 +1,10 @@
+# 0.2
+
+* --reverse flag
+* Shows the tail, rather than the head, when contents are too tall to fit
+  on screen
+
+# 0.1
+
+* Basic livesort functionality
+* --uniq flag
