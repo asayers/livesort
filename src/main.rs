@@ -53,7 +53,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 vals.values().map(|&x| x as usize).sum()
             };
             let n = (height as usize - 1).min(len);
-            for val in iter!().take(n) {
+            for val in iter!().skip(len - n) {
                 out.write_all(val.as_bytes())?;
                 out.write_all(b"\n")?;
             }
