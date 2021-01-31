@@ -69,7 +69,8 @@ fn fmt_vals(opts: Opts, vals: &BTreeMap<String, u64>, buf: &mut String) -> Resul
 struct TermPrinter<W> {
     wtr: W,
     buf: String,
-    last_print_rows: u16,
+    /// Last time, we started at this byte in `buf` and printed to the end.
+    last_print_start: usize,
 }
 
 impl<W: Write> TermPrinter<W> {
@@ -77,17 +78,21 @@ impl<W: Write> TermPrinter<W> {
         TermPrinter {
             wtr,
             buf: String::new(),
-            last_print_rows: 0,
+            last_print_start: 0,
         }
     }
     fn clear(&mut self) -> Result<()> {
         // Looks like MoveToPreviousLine(0) still moves up one line, so we
         // need to guard the 0 case
-        if self.last_print_rows != 0 {
+        if !self.buf.is_empty() {
+            let (width, _) = terminal::size()?;
+            let line_starts = soft_breaks(&self.buf[self.last_print_start..], width as usize);
+            let n = line_starts.len() as u16;
             self.wtr
-                .queue(cursor::MoveToPreviousLine(self.last_print_rows))?
-                .queue(terminal::Clear(ClearType::FromCursorDown))?;
-            self.last_print_rows = 0;
+                .queue(cursor::MoveToPreviousLine(n))?
+                .queue(terminal::Clear(ClearType::FromCursorDown))?
+                .flush()?;
+            self.last_print_start = 0;
             self.buf.clear();
         }
         Ok(())
@@ -100,7 +105,7 @@ impl<W: Write> TermPrinter<W> {
         let start = line_starts[len - n];
         self.wtr.write_all(&self.buf.as_bytes()[start..])?;
         self.wtr.flush()?;
-        self.last_print_rows = u16::try_from(n).unwrap();
+        self.last_print_start = start;
         Ok(())
     }
     /// After this we can't reliably clear what we've written (since it

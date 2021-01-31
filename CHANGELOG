@@ -1,6 +1,7 @@
 # 0.3
 
 * --count flag
+* Correctly handle long lines which wrap around
 
 # 0.2
 
