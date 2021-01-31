@@ -13,6 +13,8 @@ const FPS: u64 = 20;
 struct Opts {
     #[structopt(long, short)]
     uniq: bool,
+    #[structopt(long, short)]
+    reverse: bool,
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -22,12 +24,16 @@ fn main() -> Result<(), Box<dyn Error>> {
     // We could prevent this from allocating, but it's not worth it
     macro_rules! iter {
         () => {{
+            let iter = if opts.reverse {
+                Box::new(vals.iter().rev()) as Box<dyn Iterator<Item = (&String, &u16)>>
+            } else {
+                Box::new(vals.iter()) as Box<dyn Iterator<Item = (&String, &u16)>>
+            };
             if opts.uniq {
-                Box::new(vals.keys()) as Box<dyn Iterator<Item = &String>>
+                Box::new(iter.map(|(s, _)| s)) as Box<dyn Iterator<Item = &String>>
             } else {
                 Box::new(
-                    vals.iter()
-                        .flat_map(|(s, n): (&String, &u16)| std::iter::repeat(s).take(*n as usize)),
+                    iter.flat_map(|(s, n): (&String, &u16)| std::iter::repeat(s).take(*n as usize)),
                 ) as Box<dyn Iterator<Item = &String>>
             }
         }};
