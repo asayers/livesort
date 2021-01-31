@@ -13,11 +13,14 @@ const FPS: u64 = 20;
 
 #[derive(StructOpt, Copy, Clone)]
 struct Opts {
-    #[structopt(long, short)]
-    uniq: bool,
+    /// Reverse the sort order
     #[structopt(long, short)]
     reverse: bool,
-    #[structopt(long, short)]
+    /// Print each unique line once
+    #[structopt(long, short, group = "format")]
+    uniq: bool,
+    /// Print each unique line once and include the number of occurances
+    #[structopt(long, short, group = "format")]
     count: bool,
 }
 
