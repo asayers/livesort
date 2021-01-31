@@ -25,30 +25,27 @@ fn main() -> Result<()> {
     let opts = Opts::from_args();
     let mut vals = BTreeMap::<String, u64>::new();
 
-    let mut last_print_time = Instant::now();
     let out = stdout();
     let mut tp = TermPrinter::new(out.lock());
-    let mut buf = String::new();
+
+    let mut last_print_time = Instant::now();
     for line in stdin().lock().lines() {
         *vals.entry(line.unwrap()).or_default() += 1;
         if last_print_time.elapsed() > Duration::from_millis(1000 / FPS) && out.is_tty() {
-            fmt_vals(opts, &vals, &mut buf)?;
             tp.clear()?;
-            tp.print(&buf)?;
-            tp.wtr.flush()?;
+            fmt_vals(opts, &vals, &mut tp.buf)?;
+            tp.print()?;
             last_print_time = Instant::now();
         }
     }
-    fmt_vals(opts, &vals, &mut buf)?;
     tp.clear()?;
-    tp.wtr.write_all(buf.as_bytes())?;
-    tp.wtr.flush()?;
+    fmt_vals(opts, &vals, &mut tp.buf)?;
+    tp.print_unconstrained()?;
     Ok(())
 }
 
 fn fmt_vals(opts: Opts, vals: &BTreeMap<String, u64>, buf: &mut String) -> Result<()> {
     use std::fmt::Write;
-    buf.clear();
     // We could prevent this from allocating, but it's not worth it
     let iter = if opts.reverse {
         Box::new(vals.iter().rev()) as Box<dyn Iterator<Item = (&String, &u64)>>
@@ -71,6 +68,7 @@ fn fmt_vals(opts: Opts, vals: &BTreeMap<String, u64>, buf: &mut String) -> Resul
 
 struct TermPrinter<W> {
     wtr: W,
+    buf: String,
     last_print_rows: u16,
 }
 
@@ -78,6 +76,7 @@ impl<W: Write> TermPrinter<W> {
     fn new(wtr: W) -> TermPrinter<W> {
         TermPrinter {
             wtr,
+            buf: String::new(),
             last_print_rows: 0,
         }
     }
@@ -89,17 +88,27 @@ impl<W: Write> TermPrinter<W> {
                 .queue(cursor::MoveToPreviousLine(self.last_print_rows))?
                 .queue(terminal::Clear(ClearType::FromCursorDown))?;
             self.last_print_rows = 0;
+            self.buf.clear();
         }
         Ok(())
     }
-    fn print(&mut self, s: &str) -> Result<()> {
+    fn print(&mut self) -> Result<()> {
         let (width, height) = terminal::size()?;
-        let line_starts = soft_breaks(s, width as usize);
+        let line_starts = soft_breaks(&self.buf, width as usize);
         let len = line_starts.len();
         let n = (height as usize - 1).min(len);
         let start = line_starts[len - n];
-        self.wtr.write_all(&s.as_bytes()[start..])?;
+        self.wtr.write_all(&self.buf.as_bytes()[start..])?;
+        self.wtr.flush()?;
         self.last_print_rows = u16::try_from(n).unwrap();
+        Ok(())
+    }
+    /// After this we can't reliably clear what we've written (since it
+    /// may have gone off the top of the screen).  Hence, this method drops
+    /// the `TermPrinter`.
+    fn print_unconstrained(mut self) -> Result<()> {
+        self.wtr.write_all(self.buf.as_bytes())?;
+        self.wtr.flush()?;
         Ok(())
     }
 }
