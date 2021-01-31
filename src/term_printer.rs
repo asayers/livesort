@@ -22,7 +22,7 @@ impl<W: Write> TermPrinter<W> {
     pub fn clear(&mut self) -> Result<()> {
         // Looks like MoveToPreviousLine(0) still moves up one line, so we
         // need to guard the 0 case
-        if !self.buf.is_empty() {
+        if self.last_print_start != self.buf.len() {
             let (width, _) = terminal::size()?;
             let line_starts = soft_breaks(&self.buf[self.last_print_start..], width as usize);
             let n = line_starts.len() as u16;
@@ -30,8 +30,7 @@ impl<W: Write> TermPrinter<W> {
                 .queue(cursor::MoveToPreviousLine(n))?
                 .queue(terminal::Clear(ClearType::FromCursorDown))?
                 .flush()?;
-            self.last_print_start = 0;
-            self.buf.clear();
+            self.last_print_start = self.buf.len();
         }
         Ok(())
     }

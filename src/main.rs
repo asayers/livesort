@@ -49,6 +49,7 @@ fn main() -> Result<()> {
 
 fn fmt_vals(opts: Opts, vals: &BTreeMap<String, u64>, buf: &mut String) -> Result<()> {
     use std::fmt::Write;
+    buf.clear();
     // We could prevent this from allocating, but it's not worth it
     let iter = if opts.reverse {
         Box::new(vals.iter().rev()) as Box<dyn Iterator<Item = (&String, &u64)>>
