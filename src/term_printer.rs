@@ -86,7 +86,7 @@ impl<W: Write> TermPrinter<W> {
 
 fn soft_breaks(s: &str, width: usize) -> Vec<usize> {
     let mut line_starts = vec![0];
-    let mut push = |x: usize| line_starts.push(line_starts.last().unwrap() + x);
+    let mut cursor = 0;
     // FIXME: lines() will break on both \n and \r\n.  However, we assume that
     // there's only one byte between successive lines (that's the +1 below).
     // This means this function is broken for \r\n-terminated documents.
@@ -94,9 +94,18 @@ fn soft_breaks(s: &str, width: usize) -> Vec<usize> {
     for line in s.lines() {
         let len = line.len();
         for _ in 0..len / width {
-            push(width);
+            cursor += width;
+            line_starts.push(cursor);
         }
-        push(len % width + 1);
+        if len % width == 0 {
+            line_starts.pop();
+        } else {
+            // There's a remainder
+            cursor += len % width;
+        }
+        // For the newline char
+        cursor += 1;
+        line_starts.push(cursor);
     }
     line_starts.pop(); // Drop the last one
     line_starts
