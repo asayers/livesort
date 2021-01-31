@@ -41,10 +41,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 vals.values().map(|&x| x as usize).sum()
             };
             let n = (height as usize - 1).min(len);
-            for val in iter(opts, &vals).skip(len - n) {
-                out.write_all(val.as_bytes())?;
-                out.write_all(b"\n")?;
-            }
+            print_vals(opts, &vals, len - n, &mut out)?;
             out.flush()?;
             last_print_rows = u16::try_from(n).unwrap();
             last_print_time = Instant::now();
@@ -52,15 +49,17 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
     out.queue(cursor::MoveToPreviousLine(last_print_rows))?
         .queue(terminal::Clear(ClearType::FromCursorDown))?;
-    for val in iter(opts, &vals) {
-        out.write_all(val.as_bytes())?;
-        out.write_all(b"\n")?;
-    }
+    print_vals(opts, &vals, 0, &mut out)?;
     out.flush()?;
     Ok(())
 }
 
-fn iter(opts: Opts, vals: &BTreeMap<String, u16>) -> Box<dyn Iterator<Item = &String> + '_> {
+fn print_vals(
+    opts: Opts,
+    vals: &BTreeMap<String, u16>,
+    skip: usize,
+    mut out: impl Write,
+) -> Result<(), Box<dyn Error>> {
     // We could prevent this from allocating, but it's not worth it
     let iter = if opts.reverse {
         Box::new(vals.iter().rev()) as Box<dyn Iterator<Item = (&String, &u16)>>
@@ -68,9 +67,16 @@ fn iter(opts: Opts, vals: &BTreeMap<String, u16>) -> Box<dyn Iterator<Item = &St
         Box::new(vals.iter()) as Box<dyn Iterator<Item = (&String, &u16)>>
     };
     if opts.uniq {
-        Box::new(iter.map(|(s, _)| s)) as Box<dyn Iterator<Item = &String>>
+        for val in iter.map(|(s, _)| s).skip(skip) {
+            writeln!(out, "{}", val)?;
+        }
     } else {
-        Box::new(iter.flat_map(|(s, n): (&String, &u16)| std::iter::repeat(s).take(*n as usize)))
-            as Box<dyn Iterator<Item = &String>>
+        for val in iter
+            .flat_map(|(s, n): (&String, &u16)| std::iter::repeat(s).take(*n as usize))
+            .skip(skip)
+        {
+            writeln!(out, "{}", val)?;
+        }
     }
+    Ok(())
 }
