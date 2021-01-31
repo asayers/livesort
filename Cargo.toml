@@ -1,6 +1,6 @@
 [package]
 name = "livesort"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Alex Sayers <alex@asayers.com>"]
 description = "Like 'sort' but with live preview"
 edition = "2018"
