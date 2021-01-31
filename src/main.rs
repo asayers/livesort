@@ -107,6 +107,10 @@ impl<W: Write> TermPrinter<W> {
 fn soft_breaks(s: &str, width: usize) -> Vec<usize> {
     let mut line_starts = vec![0];
     let mut push = |x: usize| line_starts.push(line_starts.last().unwrap() + x);
+    // FIXME: lines() will break on both \n and \r\n.  However, we assume that
+    // there's only one byte between successive lines (that's the +1 below).
+    // This means this function is broken for \r\n-terminated documents.
+    // See test_soft_breaks_rn for an example.
     for line in s.lines() {
         let len = line.len();
         for _ in 0..len / width {
@@ -133,4 +137,11 @@ fn test_soft_breaks() {
     assert_eq!(&"foo\nfoobarquxzap\nfoo"[9..14], "rquxz");
     assert_eq!(&"foo\nfoobarquxzap\nfoo"[14..17], "ap\n");
     assert_eq!(&"foo\nfoobarquxzap\nfoo"[17..], "foo");
+}
+
+#[test]
+#[should_panic]
+// FIXME: This is a bug
+fn test_soft_breaks_rn() {
+    assert_eq!(soft_breaks("foo\r\nbar\r\nqux", 100), vec![0, 5, 10]);
 }
