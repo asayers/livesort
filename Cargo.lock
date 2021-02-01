@@ -116,7 +116,17 @@ name = "livesort"
 version = "0.4.0"
 dependencies = [
  "crossterm",
+ "liveterm",
  "structopt",
+]
+
+[[package]]
+name = "liveterm"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b7eb177142620ed0ca6790acb55148fa182d5c32df5f03492721a2d5ed58a714"
+dependencies = [
+ "crossterm",
 ]
 
 [[package]]

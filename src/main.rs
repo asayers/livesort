@@ -1,7 +1,5 @@
-mod term_printer;
-
-use crate::term_printer::TermPrinter;
 use crossterm::tty::IsTty;
+use liveterm::TermPrinter;
 use std::collections::BTreeMap;
 use std::error::Error;
 use std::io::{stdin, stdout, BufRead};
