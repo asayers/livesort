@@ -1,34 +1,41 @@
+use bpaf::Bpaf;
 use crossterm::tty::IsTty;
 use liveterm::TermPrinter;
 use std::collections::BTreeMap;
 use std::error::Error;
 use std::io::{stdin, stdout, BufRead};
 use std::time::{Duration, Instant};
-use structopt::StructOpt;
 
 /// We limit to this many terminal updates per second
 const FPS: u64 = 20;
 
-#[derive(StructOpt, Copy, Clone)]
+#[derive(Bpaf)]
+#[bpaf(options)]
 struct Opts {
     /// Reverse the sort order
-    #[structopt(long, short)]
+    #[bpaf(long, short)]
     reverse: bool,
     /// Sort in order of number of occurances
-    #[structopt(long, short)]
+    #[bpaf(long, short)]
     frequency: bool,
+    #[bpaf(external, optional)]
+    format: Option<Format>,
+}
+
+#[derive(Bpaf, Clone)]
+enum Format {
     /// Print each unique line once
-    #[structopt(long, short, group = "format")]
-    uniq: bool,
+    #[bpaf(long, short)]
+    Uniq,
     /// Print each unique line once and include the number of occurances
-    #[structopt(long, short, group = "format")]
-    count: bool,
+    #[bpaf(long, short)]
+    Count,
 }
 
 type Result<T> = std::result::Result<T, Box<dyn Error>>;
 
 fn main() -> Result<()> {
-    let opts = Opts::from_args();
+    let opts = opts().run();
     let mut vals = BTreeMap::<String, u64>::new();
 
     let out = stdout();
@@ -40,18 +47,18 @@ fn main() -> Result<()> {
         *vals.entry(line.unwrap()).or_default() += 1;
         if last_print_time.elapsed() > Duration::from_millis(1000 / FPS) && is_tty {
             tp.clear()?;
-            fmt_vals(opts, &vals, &mut tp.buf)?;
+            fmt_vals(&opts, &vals, &mut tp.buf)?;
             tp.print()?;
             last_print_time = Instant::now();
         }
     }
     tp.clear()?;
-    fmt_vals(opts, &vals, &mut tp.buf)?;
+    fmt_vals(&opts, &vals, &mut tp.buf)?;
     tp.print_all()?;
     Ok(())
 }
 
-fn fmt_vals(opts: Opts, vals: &BTreeMap<String, u64>, buf: &mut String) -> Result<()> {
+fn fmt_vals(opts: &Opts, vals: &BTreeMap<String, u64>, buf: &mut String) -> Result<()> {
     use std::fmt::Write;
     buf.clear();
     // We could prevent this from allocating, but it's not worth it
@@ -68,14 +75,14 @@ fn fmt_vals(opts: Opts, vals: &BTreeMap<String, u64>, buf: &mut String) -> Resul
         Box::new(iter) as Box<dyn Iterator<Item = (&String, &u64)>>
     };
     for (val, n) in iter {
-        if opts.count {
-            writeln!(buf, "{:>7} {}", n, val)?;
-        } else if opts.uniq {
-            writeln!(buf, "{}", val)?;
-        } else {
-            for _ in 0..*n {
-                writeln!(buf, "{}", val)?;
+        match opts.format {
+            None => {
+                for _ in 0..*n {
+                    writeln!(buf, "{}", val)?;
+                }
             }
+            Some(Format::Uniq) => writeln!(buf, "{}", val)?,
+            Some(Format::Count) => writeln!(buf, "{:>7} {}", n, val)?,
         }
     }
     Ok(())
