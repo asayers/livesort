@@ -10,5 +10,5 @@ repository = "https://git.sr.ht/~asayers/livesort"
 
 [dependencies]
 bpaf = { version = "0.9.15", features = ["derive"] }
-crossterm = "0.19.0"
-liveterm = "0.2.0"
+crossterm = "0.28.1"
+liveterm = "0.3.0"
